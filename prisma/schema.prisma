@@ -42,9 +42,7 @@ model Post {
   content        String
   image          String
   userId         Int
-  categoryId     Int
   user           User           @relation(fields: [userId], references: [id])
-  category       Category       @relation(fields: [categoryId], references: [id])
   comments       Comment[]
   likes          Like[]
   postCategories PostCategory[]
@@ -78,7 +76,6 @@ model Like {
 model Category {
   id             Int            @id @default(autoincrement())
   name           String         @unique
-  posts          Post[]
   postCategories PostCategory[]
 
   createdAt DateTime @default(now())
