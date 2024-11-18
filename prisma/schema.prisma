@@ -19,8 +19,11 @@ model User {
   password String
   name     String
   avatar   String
-  roleId   Int
+  roleId   Int       @default(0)
   role     Role      @relation(fields: [roleId], references: [id])
+  isVerified Boolean @default(false)
+  resetToken String?  
+  resetTokenExpires DateTime?
   posts    Post[]
   comments Comment[]
   likes    Like[]

@@ -5,7 +5,10 @@ CREATE TABLE "User" (
     "password" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "avatar" TEXT NOT NULL,
-    "roleId" INTEGER NOT NULL,
+    "roleId" INTEGER NOT NULL DEFAULT 0,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "resetToken" TEXT,
+    "resetTokenExpires" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
