@@ -36,10 +36,7 @@ export class AuthService {
       throw new Error('Default role not found');
     }
 
-    await this.prisma.user.update({
-      where: { email: user.email },
-      data: { roleId: defaultRole.id },
-    });
+    await this.usersService.assignRoleToUserByEmail(user.email, defaultRole.id);
 
     const verifyToken = this.jwtService.sign({ email: user.email });
     const verifyUrl = `${process.env.LOCALHOST_URL}/auth/verify-email/${verifyToken}`;

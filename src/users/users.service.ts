@@ -79,4 +79,11 @@ export class UsersService {
       },
     });
   }
+
+  async assignRoleToUserByEmail(email: string, roleId: number) {
+    return this.prisma.user.update({
+      where: { email },
+      data: { roleId },
+    });
+  }
 }
