@@ -18,27 +18,31 @@ export class AuthService {
   ) {}
 
   async signUp(createUserDto: CreateUserDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: createUserDto.email },
-      select: {
-        isVerified: true,
-      },
-    });
+    const existingUser = await this.usersService.findUserByEmail(
+      createUserDto.email,
+    );
+
     if (existingUser) {
       throw new Error('User already exists');
     }
 
-    const role = await this.prisma.role.findUnique({
-      where: { id: createUserDto.roleId },
-    });
-    if (!role) {
-      throw new Error('Role not found');
-    }
-
     const user = await this.usersService.createUser(createUserDto);
 
+    const defaultRole = await this.prisma.role.findUnique({
+      where: { name: 'User' },
+    });
+
+    if (!defaultRole) {
+      throw new Error('Default role not found');
+    }
+
+    await this.prisma.user.update({
+      where: { email: user.email },
+      data: { roleId: defaultRole.id },
+    });
+
     const verifyToken = this.jwtService.sign({ email: user.email });
-    const verifyUrl = `http://localhost:3000/auth/verify-email/${verifyToken}`;
+    const verifyUrl = `${process.env.LOCALHOST_URL}/auth/verify-email/${verifyToken}`;
 
     await this.sendVerificationEmail(user.email, verifyUrl);
 
@@ -50,6 +54,7 @@ export class AuthService {
   async verifyEmail(token: string) {
     try {
       const decoded = this.jwtService.verify(token);
+
       const user = await this.prisma.user.findUnique({
         where: { email: decoded.email },
       });
@@ -62,10 +67,7 @@ export class AuthService {
         return { message: 'Email is already verified' };
       }
 
-      await this.prisma.user.update({
-        where: { email: user.email },
-        data: { isVerified: true },
-      });
+      await this.usersService.verifyUserEmail(user.email);
 
       return { message: 'Email verified successfully' };
     } catch (error) {
@@ -75,9 +77,7 @@ export class AuthService {
   }
 
   async signIn(loginDto: SignInDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: loginDto.email },
-    });
+    const user = await this.usersService.findUserByEmail(loginDto.email);
 
     if (!user) {
       throw new Error('User not found');
@@ -101,9 +101,7 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    const user = await this.usersService.findUserByEmail(email);
 
     if (!user) {
       throw new Error('User not found');
@@ -114,15 +112,9 @@ export class AuthService {
       { expiresIn: '1h' },
     );
 
-    await this.prisma.user.update({
-      where: { email: user.email },
-      data: {
-        resetToken,
-        resetTokenExpires: new Date(Date.now() + 3600 * 1000),
-      },
-    });
+    await this.usersService.updateResetToken(email, resetToken);
 
-    const resetUrl = `http://your-frontend.com/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     await this.sendResetPasswordEmail(user.email, resetUrl);
 
     return { message: 'Password reset email sent successfully' };
@@ -131,9 +123,7 @@ export class AuthService {
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     try {
       const decoded = this.jwtService.verify(resetPasswordDto.token);
-      const user = await this.prisma.user.findUnique({
-        where: { email: decoded.email },
-      });
+      const user = await this.usersService.findUserByEmail(decoded.email);
 
       if (!user) {
         throw new Error('User not found');
@@ -143,14 +133,18 @@ export class AuthService {
         throw new Error('Reset token has expired');
       }
 
-      const hashedPassword = await bcrypt.hash(
+      if (resetPasswordDto.newPassword !== resetPasswordDto.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      await this.usersService.updatePassword(
+        user.email,
         resetPasswordDto.newPassword,
-        10,
       );
+
       await this.prisma.user.update({
         where: { email: user.email },
         data: {
-          password: hashedPassword,
           resetToken: null,
           resetTokenExpires: null,
         },
@@ -166,13 +160,13 @@ export class AuthService {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'oleksandr.dushnyi.ki.2021@lpnu.ua',
-        pass: 'yglk rlpm ifcu phzc',
+        user: `${process.env.EMAIL_USER}`,
+        pass: `${process.env.EMAIL_PASS}`,
       },
     });
 
     const mailOptions = {
-      from: 'oleksandr.dushnyi.ki.2021@lpnu.ua',
+      from: `${process.env.SENDER}`,
       to: email,
       subject: 'Email Verification',
       text: `Thank you for registering. Please verify your email by clicking the link below:\n\n${verifyUrl}`,
@@ -185,13 +179,13 @@ export class AuthService {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'oleksandr.dushnyi.ki.2021@lpnu.ua',
-        pass: 'yglk rlpm ifcu phzc',
+        user: `${process.env.EMAIL_USER}`,
+        pass: `${process.env.EMAIL_PASS}`,
       },
     });
 
     const mailOptions = {
-      from: 'oleksandr.dushnyi.ki.2021@lpnu.ua',
+      from: `${process.env.SENDER}`,
       to: email,
       subject: 'Password Reset Request',
       text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}`,

@@ -6,6 +6,7 @@ import {
   BadRequestException,
   Get,
   Param,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
@@ -36,7 +37,7 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
-  async requestPasswordReset(@Body('email') email: string) {
+  async requestPasswordReset(@Query('email') email: string) {
     if (!email) {
       throw new BadRequestException('Email is required');
     }

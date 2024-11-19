@@ -16,8 +16,4 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   avatar: string;
-
-  @IsInt()
-  @IsNotEmpty()
-  roleId: number;
 }

@@ -16,8 +16,4 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   avatar?: string;
-
-  @IsOptional()
-  @IsInt()
-  roleId: number;
 }
