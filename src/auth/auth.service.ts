@@ -7,6 +7,7 @@ import * as bcrypt from 'bcryptjs';
 import * as nodemailer from 'nodemailer';
 import { SignInDto } from './dto/signin.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RoleService } from '../role/role.service';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +15,7 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly roleService: RoleService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -28,9 +30,7 @@ export class AuthService {
 
     const user = await this.usersService.createUser(createUserDto);
 
-    const defaultRole = await this.prisma.role.findUnique({
-      where: { name: 'User' },
-    });
+    const defaultRole = await this.roleService.findRoleByName();
 
     if (!defaultRole) {
       throw new Error('Default role not found');
@@ -139,13 +139,7 @@ export class AuthService {
         resetPasswordDto.newPassword,
       );
 
-      await this.prisma.user.update({
-        where: { email: user.email },
-        data: {
-          resetToken: null,
-          resetTokenExpires: null,
-        },
-      });
+      await this.usersService.updatePasswordAndClearResetToken(user.email);
 
       return { message: 'Password reset successful' };
     } catch (error) {

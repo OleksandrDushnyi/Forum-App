@@ -3,15 +3,17 @@ import { PrismaClient } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
+import { RoleService } from '../role/role.service';
 
 @Injectable()
 export class UsersService {
   private prisma = new PrismaClient();
+
+  constructor(private readonly roleService: RoleService) {}
+
   async createUser(createUserDto: CreateUserDto) {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const defaultRole = await this.prisma.role.findUnique({
-      where: { name: 'User' },
-    });
+    const defaultRole = await this.roleService.findRoleByName();
 
     if (!defaultRole) {
       throw new Error('Role "User" not found');
@@ -83,6 +85,16 @@ export class UsersService {
     return this.prisma.user.update({
       where: { email },
       data: { roleId },
+    });
+  }
+
+  async updatePasswordAndClearResetToken(email: string) {
+    return this.prisma.user.update({
+      where: { email },
+      data: {
+        resetToken: null,
+        resetTokenExpires: null,
+      },
     });
   }
 }
