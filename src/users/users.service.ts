@@ -64,37 +64,19 @@ export class UsersService {
     });
   }
 
-  async verifyUserEmail(email: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { email },
-      data: { isVerified: true },
-    });
-  }
-
-  async updateResetToken(email: string, resetToken: string) {
+  async updateByEmail(
+    email: string,
+    updateData: Partial<{
+      resetToken: string | null;
+      resetTokenExpires: Date | null;
+      roleId: number;
+      password: string;
+      isVerified: true;
+    }>,
+  ) {
     return this.prisma.user.update({
       where: { email },
-      data: {
-        resetToken,
-        resetTokenExpires: new Date(Date.now() + 3600 * 1000),
-      },
-    });
-  }
-
-  async assignRoleToUserByEmail(email: string, roleId: number) {
-    return this.prisma.user.update({
-      where: { email },
-      data: { roleId },
-    });
-  }
-
-  async updatePasswordAndClearResetToken(email: string) {
-    return this.prisma.user.update({
-      where: { email },
-      data: {
-        resetToken: null,
-        resetTokenExpires: null,
-      },
+      data: updateData,
     });
   }
 }

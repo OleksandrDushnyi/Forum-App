@@ -36,7 +36,10 @@ export class AuthService {
       throw new Error('Default role not found');
     }
 
-    await this.usersService.assignRoleToUserByEmail(user.email, defaultRole.id);
+    // Assign default role to user
+    await this.usersService.updateByEmail(user.email, {
+      roleId: defaultRole.id,
+    });
 
     const verifyToken = this.jwtService.sign({ email: user.email });
     const verifyUrl = `${process.env.LOCALHOST_URL}/auth/verify-email/${verifyToken}`;
@@ -64,7 +67,8 @@ export class AuthService {
         return { message: 'Email is already verified' };
       }
 
-      await this.usersService.verifyUserEmail(user.email);
+      // Verify the user email
+      await this.usersService.updateByEmail(user.email, { isVerified: true });
 
       return { message: 'Email verified successfully' };
     } catch (error) {
@@ -109,8 +113,11 @@ export class AuthService {
       { expiresIn: '1h' },
     );
 
-    await this.usersService.updateResetToken(email, resetToken);
-
+    // Update user with reset token and expiration time
+    await this.usersService.updateByEmail(email, {
+      resetToken,
+      resetTokenExpires: new Date(Date.now() + 3600 * 1000),
+    });
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     await this.sendResetPasswordEmail(user.email, resetUrl);
 
@@ -139,7 +146,11 @@ export class AuthService {
         resetPasswordDto.newPassword,
       );
 
-      await this.usersService.updatePasswordAndClearResetToken(user.email);
+      // Update reset token
+      await this.usersService.updateByEmail(user.email, {
+        resetToken: null,
+        resetTokenExpires: null,
+      });
 
       return { message: 'Password reset successful' };
     } catch (error) {
