@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -16,7 +20,7 @@ export class UsersService {
     const defaultRole = await this.roleService.findRoleByName();
 
     if (!defaultRole) {
-      throw new Error('Role "User" not found');
+      throw new InternalServerErrorException('Role "User" not found');
     }
     return this.prisma.user.create({
       data: {
@@ -35,7 +39,7 @@ export class UsersService {
     currentUserId: number,
   ) {
     if (id !== currentUserId) {
-      throw new Error('You can only update your own profile');
+      throw new ForbiddenException('You can only update your own profile');
     }
 
     const updateData = { ...updateUserDto };

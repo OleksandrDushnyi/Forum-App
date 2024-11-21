@@ -1,4 +1,10 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient } from '@prisma/client';
 import { UsersService } from '../users/users.service';
@@ -25,7 +31,7 @@ export class AuthService {
     );
 
     if (existingUser) {
-      throw new Error('User already exists');
+      throw new BadRequestException('User already exists');
     }
 
     const user = await this.usersService.createUser(createUserDto);
@@ -33,7 +39,7 @@ export class AuthService {
     const defaultRole = await this.roleService.findRoleByName();
 
     if (!defaultRole) {
-      throw new Error('Default role not found');
+      throw new InternalServerErrorException('Default role not found');
     }
 
     // Assign default role to user
@@ -44,7 +50,13 @@ export class AuthService {
     const verifyToken = this.jwtService.sign({ email: user.email });
     const verifyUrl = `${process.env.LOCALHOST_URL}/auth/verify-email/${verifyToken}`;
 
-    await this.sendVerificationEmail(user.email, verifyUrl);
+    try {
+      await this.sendVerificationEmail(user.email, verifyUrl);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to send verification email',
+      );
+    }
 
     return {
       message: 'User registered successfully. Please verify your email.',
@@ -60,7 +72,7 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new Error('User not found');
+        throw new NotFoundException('User not found');
       }
 
       if (user.isVerified) {
@@ -73,7 +85,10 @@ export class AuthService {
       return { message: 'Email verified successfully' };
     } catch (error) {
       console.error('Verification error:', error);
-      throw new Error('Invalid or expired verification token');
+      if (error instanceof JwtService) {
+        throw new BadRequestException('Invalid or expired verification token');
+      }
+      throw new InternalServerErrorException('Error during email verification');
     }
   }
 
@@ -81,11 +96,13 @@ export class AuthService {
     const user = await this.usersService.findUserByEmail(loginDto.email);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
     if (!user.isVerified) {
-      throw new Error('Email is not verified. Please check your inbox.');
+      throw new BadRequestException(
+        'Email is not verified. Please check your inbox.',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -93,7 +110,7 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const token = this.jwtService.sign({ email: user.email });
@@ -105,7 +122,7 @@ export class AuthService {
     const user = await this.usersService.findUserByEmail(email);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
     const resetToken = this.jwtService.sign(
@@ -118,8 +135,15 @@ export class AuthService {
       resetToken,
       resetTokenExpires: new Date(Date.now() + 3600 * 1000),
     });
+
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    await this.sendResetPasswordEmail(user.email, resetUrl);
+    try {
+      await this.sendResetPasswordEmail(user.email, resetUrl);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to send reset password email',
+      );
+    }
 
     return { message: 'Password reset email sent successfully' };
   }
@@ -130,15 +154,15 @@ export class AuthService {
       const user = await this.usersService.findUserByEmail(decoded.email);
 
       if (!user) {
-        throw new Error('User not found');
+        throw new NotFoundException('User not found');
       }
 
       if (new Date() > new Date(user.resetTokenExpires)) {
-        throw new Error('Reset token has expired');
+        throw new BadRequestException('Reset token has expired');
       }
 
       if (resetPasswordDto.newPassword !== resetPasswordDto.confirmPassword) {
-        throw new Error('Passwords do not match');
+        throw new BadRequestException('Passwords do not match');
       }
 
       await this.usersService.updatePassword(
@@ -154,7 +178,8 @@ export class AuthService {
 
       return { message: 'Password reset successful' };
     } catch (error) {
-      throw new Error('Invalid or expired reset token');
+      console.error('Reset password error:', error);
+      throw new BadRequestException('Invalid or expired reset token');
     }
   }
 
@@ -174,7 +199,13 @@ export class AuthService {
       text: `Thank you for registering. Please verify your email by clicking the link below:\n\n${verifyUrl}`,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to send verification email',
+      );
+    }
   }
 
   private async sendResetPasswordEmail(email: string, resetUrl: string) {
@@ -193,6 +224,12 @@ export class AuthService {
       text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}`,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to send reset password email',
+      );
+    }
   }
 }
