@@ -4,6 +4,8 @@ import {
   NotFoundException,
   UnauthorizedException,
   InternalServerErrorException,
+  Body,
+  Query,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient } from '@prisma/client';
@@ -14,16 +16,24 @@ import * as nodemailer from 'nodemailer';
 import { SignInDto } from './dto/signin.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RoleService } from '../role/role.service';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
+  private oauth2Client: OAuth2Client;
   private prisma = new PrismaClient();
 
   constructor(
     private readonly usersService: UsersService,
     private readonly roleService: RoleService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    this.oauth2Client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URL,
+    );
+  }
 
   async signUp(createUserDto: CreateUserDto) {
     const existingUser = await this.usersService.findUserByEmail(
@@ -230,6 +240,56 @@ export class AuthService {
       throw new InternalServerErrorException(
         'Failed to send reset password email',
       );
+    }
+  }
+
+  async googleAuth() {
+    const url = this.oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+      ],
+    });
+
+    return { url };
+  }
+
+  async googleTokenVerification(@Query('code') code: string) {
+    if (!code) {
+      throw new BadRequestException('Google authorization code is required');
+    }
+
+    try {
+      const { tokens } = await this.oauth2Client.getToken(code);
+      this.oauth2Client.setCredentials(tokens);
+
+      const ticket = await this.oauth2Client.verifyIdToken({
+        idToken: tokens.id_token,
+        audience: `${process.env.GOOGLE_CLIENT_ID}`,
+      });
+
+      const payload = ticket.getPayload();
+
+      let user = await this.usersService.findUserByEmail(payload.email);
+
+      if (!user) {
+        user = await this.usersService.createUser({
+          email: payload.email,
+          name: payload.name,
+          avatar: payload.picture,
+        });
+      }
+
+      const token = this.jwtService.sign({ email: user.email });
+
+      return {
+        message: 'Google token verified successfully',
+        user,
+        token,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Google token');
     }
   }
 }
