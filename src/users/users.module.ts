@@ -3,10 +3,11 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleModule } from '../role/role.module';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @Module({
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, AdminGuard],
   exports: [UsersService],
   imports: [
     RoleModule,

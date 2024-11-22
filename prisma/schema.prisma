@@ -48,6 +48,7 @@ model Post {
   user           User           @relation(fields: [userId], references: [id])
   comments       Comment[]
   likes          Like[]
+  isArchived     Boolean        @default(false)
   postCategories PostCategory[]
 
   createdAt DateTime @default(now())
