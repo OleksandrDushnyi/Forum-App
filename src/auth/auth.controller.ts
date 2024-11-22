@@ -48,4 +48,17 @@ export class AuthController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
+
+  @Post('google')
+  async googleAuth() {
+    return this.authService.googleAuth();
+  }
+
+  @Get('google/redirect')
+  async googleTokenVerification(@Query('code') code: string) {
+    if (!code) {
+      throw new BadRequestException('Google authorization code is required');
+    }
+    return this.authService.googleTokenVerification(code);
+  }
 }
