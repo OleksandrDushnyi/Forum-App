@@ -247,8 +247,8 @@ export class AuthService {
     const url = this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: [
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/userinfo.email',
+        `${process.env.GOOGLE_API_PROFILE_URL}/auth/userinfo.profile`,
+        `${process.env.GOOGLE_API_PROFILE_URL}/auth/userinfo.email`,
       ],
     });
 
@@ -281,7 +281,10 @@ export class AuthService {
         });
       }
 
-      const token = this.jwtService.sign({ email: user.email });
+      const token = this.jwtService.sign({
+        email: user.email,
+        roleId: user.roleId,
+      });
 
       return {
         message: 'Google token verified successfully',
