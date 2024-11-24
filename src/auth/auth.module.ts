@@ -7,7 +7,7 @@ import { RoleModule } from '../role/role.module';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JwtService],
+  providers: [AuthService],
   imports: [
     RoleModule,
     UsersModule,
@@ -16,6 +16,5 @@ import { RoleModule } from '../role/role.module';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [JwtService],
 })
 export class AuthModule {}

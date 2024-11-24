@@ -31,7 +31,9 @@ export class PostController {
   }
 
   @Get()
-  findAll(@Query() query: { page: number; sort: string; archived?: boolean }) {
+  findAll(
+    @Query() query: { page?: number; sort?: string; archived?: boolean },
+  ) {
     return this.postService.findAll(query);
   }
 

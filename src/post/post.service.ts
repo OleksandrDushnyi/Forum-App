@@ -25,11 +25,26 @@ export class PostService {
     });
   }
 
-  async findAll(query: { page: number; sort: string; archived?: boolean }) {
-    const { page, sort, archived } = query;
+  async findAll(query: { page?: number; sort?: string; archived?: boolean }) {
+    const { page = 1, sort = 'title', archived } = query;
+
+    const validSortFields = ['title', 'user'];
+    const sortBy = validSortFields.includes(sort) ? sort : 'title';
+
     return this.prisma.post.findMany({
-      where: { isArchived: archived || false },
-      orderBy: [{ [sort]: 'asc' }, { user: { name: 'asc' } }],
+      where: {
+        isArchived: archived || false,
+      },
+      orderBy: [
+        {
+          [sortBy]: 'asc',
+        },
+        {
+          user: {
+            name: 'asc',
+          },
+        },
+      ],
       skip: (page - 1) * 10,
       take: 10,
     });
