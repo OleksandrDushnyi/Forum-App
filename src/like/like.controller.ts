@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { CreateLikeDto } from './dto/create-like.dto';
-import { AdminGuard } from 'src/auth/guards/admin.guard';
+import { LikeOwnershipGuard } from './guards/likeOwnership.guard';
 
 @Controller('likes')
 export class LikeController {
@@ -20,7 +20,7 @@ export class LikeController {
   }
 
   @Delete()
-  @UseGuards(AdminGuard)
+  @UseGuards(LikeOwnershipGuard)
   remove(@Query('userId') userId: number, @Query('postId') postId: number) {
     return this.likeService.remove(userId, postId, true);
   }
