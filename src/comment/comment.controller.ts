@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
-import { AdminGuard } from 'src/auth/guards/admin.guard';
+import { CommentOwnershipGuard } from './guards/commentOwnership.guard';
 
 @Controller('comments')
 export class CommentController {
@@ -27,7 +27,7 @@ export class CommentController {
   }
 
   @Delete(':id')
-  @UseGuards(AdminGuard)
+  @UseGuards(CommentOwnershipGuard)
   remove(@Param('id') id: number, @Query('userId') userId: number) {
     return this.commentService.remove(id, userId, true);
   }
