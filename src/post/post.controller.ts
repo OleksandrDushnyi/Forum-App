@@ -13,7 +13,7 @@ import {
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { AdminGuard } from 'src/auth/guards/admin.guard';
+import { PostOwnershipGuard } from './guards/postOwnership.guard';
 
 @Controller('posts')
 export class PostController {
@@ -24,16 +24,23 @@ export class PostController {
     return this.postService.create(createPostDto);
   }
 
-  @Put(':id')
-  @UseGuards(AdminGuard)
+  @Patch(':id')
+  @UseGuards(PostOwnershipGuard)
   update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
     return this.postService.update(id, updatePostDto);
   }
 
   @Get()
   findAll(
-    @Query() query: { page?: number; sort?: string; archived?: boolean },
+    @Query()
+    query: {
+      page?: number;
+      sort?: string;
+      archived?: string;
+      userId: string;
+    },
   ) {
+    console.log(query.archived);
     return this.postService.findAll(query);
   }
 
@@ -43,13 +50,24 @@ export class PostController {
   }
 
   @Patch(':id/archive')
-  @UseGuards(AdminGuard)
+  @UseGuards(PostOwnershipGuard)
   archive(@Param('id') id: string) {
     return this.postService.archive(id);
   }
 
+  @Patch(':id/unarchive')
+  @UseGuards(PostOwnershipGuard)
+  unarchive(@Param('id') id: string) {
+    return this.postService.unarchive(id);
+  }
+
+  @Get('all/:userId')
+  findAllForAdminOrUser(@Param('userId') userId: string) {
+    return this.postService.findAllForAdminOrUser(userId);
+  }
+
   @Delete(':id')
-  @UseGuards(AdminGuard)
+  @UseGuards(PostOwnershipGuard)
   remove(@Param('id') id: string) {
     return this.postService.remove(id);
   }

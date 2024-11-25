@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class UpdatePostDto {
   @IsString()
@@ -12,6 +18,10 @@ export class UpdatePostDto {
   @IsString()
   @IsOptional()
   image?: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  userId: number;
 
   @IsBoolean()
   @IsOptional()
