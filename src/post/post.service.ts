@@ -1,26 +1,45 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { UsersService } from 'src/users/users.service';
+import axios from 'axios';
+import * as FormData from 'form-data';
 
 @Injectable()
 export class PostService {
   private prisma = new PrismaClient();
   constructor(private readonly usersService: UsersService) {}
 
-  async create(createPostDto: CreatePostDto) {
+  async create(createPostDto: CreatePostDto, image?: Express.Multer.File) {
     const { userId, ...data } = createPostDto;
+
+    let imageUrl = null;
+
+    if (image) {
+      imageUrl = await this.uploadToImgur(image.buffer);
+    } else if (createPostDto.image) {
+      imageUrl = createPostDto.image;
+    }
+
     return this.prisma.post.create({
       data: {
         ...data,
-        user: { connect: { id: userId } },
-        image: data.image || null,
+        user: { connect: { id: parseInt(userId) } },
+        image: imageUrl,
       },
     });
   }
 
-  async update(id: string, updatePostDto: UpdatePostDto) {
+  async update(
+    id: string,
+    updatePostDto: UpdatePostDto,
+    image?: Express.Multer.File,
+  ) {
     const post = await this.prisma.post.findUnique({
       where: { id: parseInt(id) },
     });
@@ -30,14 +49,23 @@ export class PostService {
     }
 
     const isAdmin = await this.isAdmin(updatePostDto.userId);
-
     if (!isAdmin && post.userId !== updatePostDto.userId) {
       throw new ForbiddenException('You can only update your own posts');
     }
 
+    let imageUrl = post.image;
+    if (updatePostDto.image) {
+      imageUrl = updatePostDto.image;
+    } else if (image.buffer) {
+      imageUrl = await this.uploadToImgur(image.buffer);
+    }
+
     return this.prisma.post.update({
       where: { id: parseInt(id) },
-      data: updatePostDto,
+      data: {
+        ...updatePostDto,
+        image: imageUrl,
+      },
     });
   }
 
@@ -145,5 +173,26 @@ export class PostService {
       throw new ForbiddenException('User role not found');
     }
     return user.roleId === 2;
+  }
+
+  private async uploadToImgur(imageBuffer: Buffer): Promise<string> {
+    const formData = new FormData();
+    formData.append('image', imageBuffer.toString('base64'));
+
+    try {
+      const response = await axios.post(
+        `${process.env.IMGUR_CLIENT_URL}/3/image`,
+        formData,
+        {
+          headers: {
+            Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+            ...formData.getHeaders(),
+          },
+        },
+      );
+      return response.data.data.link;
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to upload image to Imgur');
+    }
   }
 }
