@@ -5,6 +5,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { CreateLikeDto } from './dto/create-like.dto';
@@ -14,14 +15,22 @@ import { LikeOwnershipGuard } from './guards/likeOwnership.guard';
 export class LikeController {
   constructor(private readonly likeService: LikeService) {}
 
-  @Post()
-  create(@Body() createLikeDto: CreateLikeDto) {
-    return this.likeService.create(createLikeDto);
+  @Post(':ref/:id')
+  create(
+    @Body() createLikeDto: CreateLikeDto,
+    @Param('ref') ref: string,
+    @Param('id') id: string,
+  ) {
+    return this.likeService.create(createLikeDto, ref, id);
   }
 
-  @Delete()
+  @Delete(':ref/:id')
   @UseGuards(LikeOwnershipGuard)
-  remove(@Query('userId') userId: number, @Query('postId') postId: number) {
-    return this.likeService.remove(userId, postId, true);
+  remove(
+    @Param('ref') ref: string,
+    @Param('id') id: string,
+    @Query('userId') userId: string,
+  ) {
+    return this.likeService.remove(userId, ref, id);
   }
 }
