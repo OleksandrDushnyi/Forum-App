@@ -7,6 +7,10 @@ import {
   UploadedFile,
   Param,
   Patch,
+  Get,
+  Query,
+  Delete,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -31,5 +35,30 @@ export class UsersController {
     @UploadedFile() avatar: Express.Multer.File,
   ) {
     return this.usersService.uploadAvatar(userId, avatar);
+  }
+
+  @Get()
+  async findAll(
+    @Query('username') username?: string,
+    @Query('email') email?: string,
+  ) {
+    return this.usersService.findAll({ username, email });
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.usersService.findUserById(parseInt(id));
+  }
+
+  @Get('profile/:id')
+  async findProfile(@Param('id') id: string) {
+    return this.usersService.findUserProfile(parseInt(id));
+  }
+
+  @Delete(':id')
+  @UseGuards(AdminGuard)
+  async remove(@Param('id') id: string) {
+    console.log(id);
+    return this.usersService.removeUser(id);
   }
 }

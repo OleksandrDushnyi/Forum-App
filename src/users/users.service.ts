@@ -136,4 +136,53 @@ export class UsersService {
       data: updateData,
     });
   }
+
+  async findAll(filters: { username?: string; email?: string }) {
+    const where: any = {};
+    if (filters.username) {
+      where.name = { contains: filters.username };
+    }
+    if (filters.email) {
+      where.email = { contains: filters.email };
+    }
+
+    return this.prisma.user.findMany({ where });
+  }
+
+  async removeUser(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: parseInt(id) },
+    });
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    const parseId = parseInt(id);
+
+    if (user.roleId !== 2 && parseId !== user.id) {
+      throw new ForbiddenException('You can only delete your own account');
+    }
+
+    if (user.roleId === 2 && user.roleId !== 2) {
+      throw new ForbiddenException('Admins cannot delete other admin accounts');
+    }
+
+    await this.prisma.user.delete({ where: { id: parseInt(id) } });
+    return { message: 'User deleted successfully' };
+  }
+
+  async findUserProfile(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        posts: true,
+      },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    return user;
+  }
 }
