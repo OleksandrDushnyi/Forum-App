@@ -7,10 +7,12 @@ import {
   Get,
   Query,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CommentOwnershipGuard } from './guards/commentOwnership.guard';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 
 @Controller('comments')
 export class CommentController {
@@ -30,5 +32,20 @@ export class CommentController {
   @UseGuards(CommentOwnershipGuard)
   remove(@Param('id') id: number, @Query('userId') userId: number) {
     return this.commentService.remove(id, userId, true);
+  }
+
+  @Get(':postId/:id')
+  findOne(@Param('postId') postId: string, @Param('id') id: string) {
+    return this.commentService.findOne(postId, id);
+  }
+
+  @Patch(':postId/:id')
+  @UseGuards(CommentOwnershipGuard)
+  update(
+    @Param('postId') postId: string,
+    @Param('id') id: string,
+    @Body() updateCommentDto: UpdateCommentDto,
+  ) {
+    return this.commentService.update(postId, id, updateCommentDto);
   }
 }
