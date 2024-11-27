@@ -1,26 +1,47 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { UsersService } from 'src/users/users.service';
+import { ImgurService } from './imgure.service';
 
 @Injectable()
 export class PostService {
   private prisma = new PrismaClient();
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly imgurService: ImgurService,
+  ) {}
 
-  async create(createPostDto: CreatePostDto) {
+  async create(createPostDto: CreatePostDto, image?: Express.Multer.File) {
     const { userId, ...data } = createPostDto;
+
+    let imageUrl = null;
+
+    if (image) {
+      imageUrl = await this.imgurService.uploadImage(image.buffer);
+    } else if (createPostDto.image) {
+      imageUrl = createPostDto.image;
+    }
+
     return this.prisma.post.create({
       data: {
         ...data,
-        user: { connect: { id: userId } },
-        image: data.image || null,
+        user: { connect: { id: parseInt(userId) } },
+        image: imageUrl,
       },
     });
   }
 
-  async update(id: string, updatePostDto: UpdatePostDto) {
+  async update(
+    id: string,
+    updatePostDto: UpdatePostDto,
+    image?: Express.Multer.File,
+  ) {
     const post = await this.prisma.post.findUnique({
       where: { id: parseInt(id) },
     });
@@ -30,14 +51,23 @@ export class PostService {
     }
 
     const isAdmin = await this.isAdmin(updatePostDto.userId);
-
     if (!isAdmin && post.userId !== updatePostDto.userId) {
       throw new ForbiddenException('You can only update your own posts');
     }
 
+    let imageUrl = post.image;
+    if (updatePostDto.image) {
+      imageUrl = updatePostDto.image;
+    } else if (image.buffer) {
+      imageUrl = await this.imgurService.uploadImage(image.buffer);
+    }
+
     return this.prisma.post.update({
       where: { id: parseInt(id) },
-      data: updatePostDto,
+      data: {
+        ...updatePostDto,
+        image: imageUrl,
+      },
     });
   }
 
@@ -130,8 +160,11 @@ export class PostService {
       where: { id: parseInt(id) },
     });
 
-    if (!post) {
-      throw new ForbiddenException('Post not found');
+    if (post.image) {
+      const imageDeleteHash = this.imgurService.extractImageDeleteHash(
+        post.image,
+      );
+      await this.imgurService.deleteImage(imageDeleteHash);
     }
 
     return this.prisma.post.delete({

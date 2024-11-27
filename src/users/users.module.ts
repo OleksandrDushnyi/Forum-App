@@ -4,10 +4,11 @@ import { UsersController } from './users.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleModule } from '../role/role.module';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { ImgurService } from './imgure.service';
 
 @Module({
   controllers: [UsersController],
-  providers: [UsersService, AdminGuard],
+  providers: [UsersService, AdminGuard, ImgurService],
   exports: [UsersService],
   imports: [
     RoleModule,

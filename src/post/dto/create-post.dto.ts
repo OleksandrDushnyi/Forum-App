@@ -19,9 +19,9 @@ export class CreatePostDto {
   @IsOptional()
   image?: string;
 
-  @IsInt()
+  @IsString()
   @IsNotEmpty()
-  userId: number;
+  userId: string;
 
   @IsBoolean()
   @IsOptional()

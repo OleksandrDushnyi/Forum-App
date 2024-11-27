@@ -6,10 +6,11 @@ import { AdminGuard } from '../auth/guards/admin.guard';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { RoleModule } from 'src/role/role.module';
+import { ImgurService } from './imgure.service';
 
 @Module({
   controllers: [PostController],
-  providers: [PostService, AdminGuard, JwtService],
+  providers: [PostService, AdminGuard, JwtService, ImgurService],
   imports: [
     AuthModule,
     JwtModule.register({

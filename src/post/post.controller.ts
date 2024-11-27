@@ -9,25 +9,37 @@ import {
   Delete,
   Patch,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostOwnershipGuard } from './guards/postOwnership.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
-    return this.postService.create(createPostDto);
+  @UseInterceptors(FileInterceptor('image'))
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.postService.create(createPostDto, image);
   }
 
   @Patch(':id')
   @UseGuards(PostOwnershipGuard)
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postService.update(id, updatePostDto);
+  @UseInterceptors(FileInterceptor('image'))
+  update(
+    @Param('id') id: string,
+    @Body() updatePostDto: UpdatePostDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.postService.update(id, updatePostDto, image);
   }
 
   @Get()
@@ -40,7 +52,6 @@ export class PostController {
       userId: string;
     },
   ) {
-    console.log(query.archived);
     return this.postService.findAll(query);
   }
 
