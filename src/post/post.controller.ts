@@ -52,7 +52,6 @@ export class PostController {
       userId: string;
     },
   ) {
-    console.log(query.archived);
     return this.postService.findAll(query);
   }
 

@@ -7,13 +7,15 @@ import { PrismaClient } from '@prisma/client';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { UsersService } from 'src/users/users.service';
-import axios from 'axios';
-import * as FormData from 'form-data';
+import { ImgurService } from './imgure.service';
 
 @Injectable()
 export class PostService {
   private prisma = new PrismaClient();
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly imgurService: ImgurService,
+  ) {}
 
   async create(createPostDto: CreatePostDto, image?: Express.Multer.File) {
     const { userId, ...data } = createPostDto;
@@ -21,7 +23,7 @@ export class PostService {
     let imageUrl = null;
 
     if (image) {
-      imageUrl = await this.uploadToImgur(image.buffer);
+      imageUrl = await this.imgurService.uploadImage(image.buffer);
     } else if (createPostDto.image) {
       imageUrl = createPostDto.image;
     }
@@ -57,7 +59,7 @@ export class PostService {
     if (updatePostDto.image) {
       imageUrl = updatePostDto.image;
     } else if (image.buffer) {
-      imageUrl = await this.uploadToImgur(image.buffer);
+      imageUrl = await this.imgurService.uploadImage(image.buffer);
     }
 
     return this.prisma.post.update({
@@ -158,8 +160,11 @@ export class PostService {
       where: { id: parseInt(id) },
     });
 
-    if (!post) {
-      throw new ForbiddenException('Post not found');
+    if (post.image) {
+      const imageDeleteHash = this.imgurService.extractImageDeleteHash(
+        post.image,
+      );
+      await this.imgurService.deleteImage(imageDeleteHash);
     }
 
     return this.prisma.post.delete({
@@ -173,26 +178,5 @@ export class PostService {
       throw new ForbiddenException('User role not found');
     }
     return user.roleId === 2;
-  }
-
-  private async uploadToImgur(imageBuffer: Buffer): Promise<string> {
-    const formData = new FormData();
-    formData.append('image', imageBuffer.toString('base64'));
-
-    try {
-      const response = await axios.post(
-        `${process.env.IMGUR_CLIENT_URL}/3/image`,
-        formData,
-        {
-          headers: {
-            Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-            ...formData.getHeaders(),
-          },
-        },
-      );
-      return response.data.data.link;
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to upload image to Imgur');
-    }
   }
 }
