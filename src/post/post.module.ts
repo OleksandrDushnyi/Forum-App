@@ -14,7 +14,7 @@ import { ImgurService } from './imgure.service';
   imports: [
     AuthModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'default_secret',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
     UsersModule,

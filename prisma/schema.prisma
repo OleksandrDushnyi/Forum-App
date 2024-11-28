@@ -45,7 +45,7 @@ model Post {
   content        String
   image          String
   userId         Int
-  user           User           @relation(fields: [userId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments       Comment[]
   likes          Like[]
   isArchived     Boolean        @default(false)

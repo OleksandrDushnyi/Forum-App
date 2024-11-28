@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -135,5 +137,73 @@ export class UsersService {
       where: { email },
       data: updateData,
     });
+  }
+
+  async findAll(filters: { username?: string; email?: string }) {
+    const where: any = {};
+    if (filters.username) {
+      where.name = { contains: filters.username };
+    }
+    if (filters.email) {
+      where.email = { contains: filters.email };
+    }
+
+    return this.prisma.user.findMany({ where });
+  }
+
+  async removeUser(id: string, currentUserId: string) {
+    const parseId = parseInt(id);
+    const currentUserParsedId = parseInt(currentUserId);
+
+    if (isNaN(parseId) || isNaN(currentUserParsedId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: parseId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: currentUserParsedId },
+    });
+
+    if (!currentUser) {
+      throw new ForbiddenException('Current user not found');
+    }
+
+    if (currentUser.roleId !== 2 && parseId !== currentUserParsedId) {
+      throw new ForbiddenException('You can only delete your own account');
+    }
+
+    if (
+      currentUser.roleId === 2 &&
+      user.roleId === 2 &&
+      parseId !== currentUserParsedId
+    ) {
+      throw new ForbiddenException('Admins cannot delete other admin accounts');
+    }
+
+    await this.prisma.user.delete({ where: { id: parseId } });
+
+    return { message: 'User deleted successfully' };
+  }
+
+  async findUserProfile(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        posts: true,
+      },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    return user;
   }
 }

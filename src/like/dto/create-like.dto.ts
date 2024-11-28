@@ -4,8 +4,4 @@ export class CreateLikeDto {
   @IsInt()
   @IsNotEmpty()
   userId: number;
-
-  @IsInt()
-  @IsNotEmpty()
-  postId: number;
 }
