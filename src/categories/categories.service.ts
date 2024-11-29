@@ -25,15 +25,17 @@ export class CategoriesService {
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     await this.findOne(id);
-    return this.prisma.category.update({
+    await this.prisma.category.update({
       where: { id },
       data: updateCategoryDto,
     });
+    return { message: 'Update category successfully' };
   }
 
   async remove(id: number) {
     await this.findOne(id);
-    return this.prisma.category.delete({ where: { id } });
+    await this.prisma.category.delete({ where: { id } });
+    return { message: 'Delete category successfully' };
   }
 
   async getPostsByCategory(categoryId: number) {
@@ -59,11 +61,12 @@ export class CategoriesService {
   }
 
   async removeCategoryFromPost(postId: number, categoryId: number) {
-    return this.prisma.postCategory.deleteMany({
+    await this.prisma.postCategory.deleteMany({
       where: {
         postId,
         categoryId,
       },
     });
+    return { message: 'Delete category from post successfully' };
   }
 }
