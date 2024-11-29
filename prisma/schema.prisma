@@ -27,6 +27,8 @@ model User {
   posts    Post[]
   comments Comment[]
   likes    Like[]
+  followers Follower[]  @relation("followingRelation")
+  followings Follower[] @relation("followerRelation")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -92,6 +94,16 @@ model PostCategory {
   categoryId Int
   post       Post     @relation(fields: [postId], references: [id])
   category   Category @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Follower {
+  id         Int    @id @default(autoincrement())
+  followerId Int
+  followingId Int
+  follower   User   @relation("followerRelation", fields: [followerId], references: [id])
+  following  User   @relation("followingRelation", fields: [followingId], references: [id])
 
   createdAt DateTime @default(now())
 }
