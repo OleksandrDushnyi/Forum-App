@@ -97,12 +97,26 @@ export class PostService {
       orderBy: [{ [sort]: 'asc' }, { user: { name: 'asc' } }],
       skip: (page - 1) * 10,
       take: 10,
+      include: {
+        postCategories: {
+          include: {
+            category: true,
+          },
+        },
+      },
     });
   }
 
   async findOne(id: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: parseInt(id) },
+      include: {
+        postCategories: {
+          include: {
+            category: true,
+          },
+        },
+      },
     });
 
     if (!post) {
@@ -149,6 +163,13 @@ export class PostService {
       where: {
         isArchived: isAdmin ? undefined : false,
         userId: isAdmin ? undefined : parseInt(userId),
+      },
+      include: {
+        postCategories: {
+          include: {
+            category: true,
+          },
+        },
       },
       orderBy: [{ title: 'asc' }, { user: { name: 'asc' } }],
       take: 10,
