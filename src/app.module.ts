@@ -8,9 +8,10 @@ import { PostModule } from './post/post.module';
 import { LikeModule } from './like/like.module';
 import { CommentModule } from './comment/comment.module';
 import { CategoriesModule } from './categories/categories.module';
+import { FollowersModule } from './followers/followers.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, RoleModule, PostModule, LikeModule, CommentModule, CategoriesModule],
+  imports: [UsersModule, AuthModule, RoleModule, PostModule, LikeModule, CommentModule, CategoriesModule, FollowersModule],
   controllers: [AppController],
   providers: [AppService],
 })
