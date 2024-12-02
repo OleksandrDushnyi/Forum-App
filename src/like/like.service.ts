@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreateLikeDto } from './dto/create-like.dto';
+import { StatisticsService } from 'src/statistics/statistics.service';
 
 @Injectable()
 export class LikeService {
   private prisma = new PrismaClient();
+
+  constructor(private readonly statisticsService: StatisticsService) {}
 
   async create(createLikeDto: CreateLikeDto, ref: string, id: string) {
     const { userId } = createLikeDto;
@@ -41,17 +44,28 @@ export class LikeService {
       );
     }
 
-    return this.prisma.like.create({
+    const like = await this.prisma.like.create({
       data,
     });
+
+    await this.statisticsService.logAction(
+      'Create',
+      userId,
+      'Like',
+      like.id,
+      like,
+    );
+
+    return like;
   }
 
   async remove(userId: string, ref: string, id: string) {
     const parseUserId = parseInt(userId);
+
     const like = await this.prisma.like.findFirst({
       where: {
         userId: parseUserId,
-        [ref === 'post' ? 'postId' : 'commentId']: id,
+        [ref === 'post' ? 'postId' : 'commentId']: parseInt(id),
       },
     });
 
@@ -68,9 +82,17 @@ export class LikeService {
     await this.prisma.like.deleteMany({
       where: {
         userId: parseUserId,
-        [ref === 'post' ? 'postId' : 'commentId']: id,
+        [ref === 'post' ? 'postId' : 'commentId']: parseInt(id),
       },
     });
+
+    await this.statisticsService.logAction(
+      'Delete',
+      parseUserId,
+      'Like',
+      like.id,
+      like,
+    );
 
     return { message: 'Like successfully deleted' };
   }

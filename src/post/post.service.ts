@@ -1,25 +1,23 @@
-import {
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { UsersService } from 'src/users/users.service';
 import { ImgurService } from './imgure.service';
+import { StatisticsService } from 'src/statistics/statistics.service';
 
 @Injectable()
 export class PostService {
   private prisma = new PrismaClient();
+
   constructor(
     private readonly usersService: UsersService,
     private readonly imgurService: ImgurService,
+    private readonly statisticsService: StatisticsService,
   ) {}
 
   async create(createPostDto: CreatePostDto, image?: Express.Multer.File) {
     const { userId, ...data } = createPostDto;
-
     let imageUrl = null;
 
     if (image) {
@@ -28,13 +26,23 @@ export class PostService {
       imageUrl = createPostDto.image;
     }
 
-    return this.prisma.post.create({
+    const post = await this.prisma.post.create({
       data: {
         ...data,
         user: { connect: { id: parseInt(userId) } },
         image: imageUrl,
       },
     });
+
+    await this.statisticsService.logAction(
+      'Create',
+      parseInt(userId),
+      'Post',
+      post.id,
+      post,
+    );
+
+    return post;
   }
 
   async update(
@@ -62,13 +70,23 @@ export class PostService {
       imageUrl = await this.imgurService.uploadImage(image.buffer);
     }
 
-    return this.prisma.post.update({
+    const updatedPost = await this.prisma.post.update({
       where: { id: parseInt(id) },
       data: {
         ...updatePostDto,
         image: imageUrl,
       },
     });
+
+    await this.statisticsService.logAction(
+      'Update',
+      updatePostDto.userId,
+      'Post',
+      post.id,
+      updatedPost,
+    );
+
+    return updatedPost;
   }
 
   async findAll(query: {
@@ -123,37 +141,49 @@ export class PostService {
       throw new ForbiddenException('Post not found');
     }
 
+    await this.statisticsService.logAction(
+      'Retrieve',
+      null,
+      'Post',
+      post.id,
+      post,
+    );
+
     return post;
   }
 
   async archive(id: string) {
-    const post = await this.prisma.post.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-    if (!post) {
-      throw new ForbiddenException('Post not found');
-    }
-
-    return this.prisma.post.update({
+    const post = await this.prisma.post.update({
       where: { id: parseInt(id) },
       data: { isArchived: true },
     });
+
+    await this.statisticsService.logAction(
+      'Archive',
+      post.userId,
+      'Post',
+      post.id,
+      post,
+    );
+
+    return post;
   }
 
   async unarchive(id: string) {
-    const post = await this.prisma.post.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-    if (!post) {
-      throw new ForbiddenException('Post not found');
-    }
-
-    return this.prisma.post.update({
+    const post = await this.prisma.post.update({
       where: { id: parseInt(id) },
       data: { isArchived: false },
     });
+
+    await this.statisticsService.logAction(
+      'Unarchive',
+      post.userId,
+      'Post',
+      post.id,
+      post,
+    );
+
+    return post;
   }
 
   async findAllForAdminOrUser(userId: string) {
@@ -181,6 +211,10 @@ export class PostService {
       where: { id: parseInt(id) },
     });
 
+    if (!post) {
+      throw new ForbiddenException('Post not found');
+    }
+
     if (post.image) {
       const imageDeleteHash = this.imgurService.extractImageDeleteHash(
         post.image,
@@ -188,9 +222,19 @@ export class PostService {
       await this.imgurService.deleteImage(imageDeleteHash);
     }
 
-    return this.prisma.post.delete({
+    await this.prisma.post.delete({
       where: { id: parseInt(id) },
     });
+
+    await this.statisticsService.logAction(
+      'Delete',
+      post.userId,
+      'Post',
+      post.id,
+      post,
+    );
+
+    return { message: 'Post deleted successfully' };
   }
 
   private async isAdmin(userId: number): Promise<boolean> {

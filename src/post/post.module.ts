@@ -7,6 +7,7 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { RoleModule } from 'src/role/role.module';
 import { ImgurService } from './imgure.service';
+import { StatisticsModule } from 'src/statistics/statistics.module';
 
 @Module({
   controllers: [PostController],
@@ -19,6 +20,7 @@ import { ImgurService } from './imgure.service';
     }),
     UsersModule,
     RoleModule,
+    StatisticsModule,
   ],
 })
 export class PostModule {}
