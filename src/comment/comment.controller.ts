@@ -30,8 +30,8 @@ export class CommentController {
 
   @Delete(':id')
   @UseGuards(CommentOwnershipGuard)
-  remove(@Param('id') id: number, @Query('userId') userId: number) {
-    return this.commentService.remove(id, userId, true);
+  remove(@Param('id') id: string, @Query('userId') userId: string) {
+    return this.commentService.remove(+id, +userId, true);
   }
 
   @Get(':postId/:id')

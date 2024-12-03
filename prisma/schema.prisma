@@ -29,6 +29,7 @@ model User {
   likes    Like[]
   followers Follower[]  @relation("followingRelation")
   followings Follower[] @relation("followerRelation")
+  actions     UserAction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,3 +108,16 @@ model Follower {
 
   createdAt DateTime @default(now())
 }
+
+model UserAction {
+  id          Int      @id @default(autoincrement())
+  action      String   
+  userId      Int?      
+  entityType  String   
+  entityId    Int?     
+  entity      Json?    
+  timestamp   DateTime @default(now()) 
+
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
