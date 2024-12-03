@@ -21,4 +21,21 @@ export class StatisticsController {
       interval: interval || 'total',
     });
   }
+
+  @Get('export/pdf-dropbox')
+  async exportStatisticsToPdfAndUploadToDropbox(
+    @Query('userId') userId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('entityTypes') entityTypes: string[],
+    @Query('interval') interval: string,
+  ) {
+    return this.statisticsService.exportStatisticsToPdfAndUploadToDropbox({
+      userId: userId ? parseInt(userId) : null,
+      startDate,
+      endDate,
+      entityTypes,
+      interval: interval || 'total',
+    });
+  }
 }
