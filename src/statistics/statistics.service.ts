@@ -6,6 +6,8 @@ import puppeteer from 'puppeteer';
 import * as fs from 'fs';
 import * as path from 'path';
 import { UsersService } from 'src/users/users.service';
+import * as mustache from 'mustache';
+import { log } from 'console';
 @Injectable()
 export class StatisticsService {
   private prisma = new PrismaClient();
@@ -121,7 +123,6 @@ export class StatisticsService {
     interval: string;
   }) {
     const statistics = await this.getStatistics(query);
-    console.log('Statistics:', statistics);
     const user = await this.usersService.findUserInformation(query.userId);
 
     const pdfPath = await this.generatePdfWithPuppeteer(
@@ -148,7 +149,8 @@ export class StatisticsService {
     const htmlContent = this.generateHtml(statistics, user, query);
 
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    const userDocumentsPath = path.join('D:', 'statistics');
+    await page.waitForSelector('#statisticsChart');
+    const userDocumentsPath = path.join(process.cwd(), 'statistics');
 
     if (!fs.existsSync(userDocumentsPath)) {
       fs.mkdirSync(userDocumentsPath, { recursive: true });
@@ -167,19 +169,18 @@ export class StatisticsService {
   }
 
   private generateHtml(statistics: any[], user: any, query: any): string {
-    if (!statistics || statistics.length === 0) {
-      return `
-        <html>
-          <body>
-            <h1>There are no statistics for the selected period.</h1>
-          </body>
-        </html>
-      `;
-    }
+    const templatePath = path.join(
+      process.cwd(),
+      'src',
+      'statistics',
+      'templates',
+      'statistics.template.html',
+    );
+
+    const template = fs.readFileSync(templatePath, 'utf8');
 
     const labels = statistics.map(({ date }) => date);
-
-    const datasets = statistics[0]?.actions.map(({ entityType }) => ({
+    const datasets = statistics[0]?.actions?.map(({ entityType }) => ({
       label: entityType,
       data: statistics.map(
         ({ actions }) =>
@@ -190,101 +191,28 @@ export class StatisticsService {
       fill: false,
     }));
 
-    const rows = statistics
-      .map(
-        ({ date, actions }) => `
-          <tr>
-            <td>${date}</td>
-            <td>
-              ${actions
-                .map(
-                  ({ action, entityType, count }) =>
-                    `<div>${action} (${entityType}): ${count}</div>`,
-                )
-                .join('')}
-            </td>
-          </tr>`,
-      )
-      .join('');
+    if (!datasets || datasets.length === 0) {
+      console.log('NO datasets', datasets);
+    }
 
-    // console.log('Statistics:', JSON.stringify(statistics, null, 2));
-    // console.log('Labels Data:', labels);
+    if (!statistics || statistics.length === 0) {
+      const noStatsTemplatePath = path.join(
+        process.cwd(),
+        'src',
+        'statistics',
+        'templates',
+        'no-statistics.template.html',
+      );
+      return fs.readFileSync(noStatsTemplatePath, 'utf8');
+    }
 
-    return `
-      <html>
-        <head>
-          <style>
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid #ddd;
-              padding: 8px;
-            }
-            th {
-              background-color: #f2f2f2;
-            }
-            canvas {
-              display: block;
-              margin: 20px auto;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>User Statistics</h1>
-          <div>
-            <h2>User Info:</h2>
-            <p><strong>Name:</strong> ${user?.name}</p>
-            <p><strong>Email:</strong> ${user?.email}</p>
-            <p><strong>Followers:</strong> 
-            ${user?.followers.length > 0 ? user?.followers.length : 'No followers'}</p>
-            <p><strong>Following:</strong> 
-            ${user?.followings.length > 0 ? user?.followings.length : 'No followings'}</p>
-            <h2>Statistics Data:</h2>
-            <p><strong>Period:</strong> ${query.startDate} to ${query.endDate}</p>
-            <p><strong>Interval:</strong> ${query.interval}</p>
-          </div>
-          <canvas id="statisticsChart" width="800" height="400"></canvas>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const ctx = document.getElementById('statisticsChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ${JSON.stringify(labels)},
-      datasets: ${JSON.stringify(datasets)},
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true },
-        title: {
-          display: true,
-          text: 'User Statistics by Entity Type',
-        },
-      },
-      scales: {
-        x: { title: { display: true, text: 'Date' }},
-        y: { title: { display: true, text: 'Actions Count' },  min: 0,},
-      },
-    },
-  });
-</script>
-        </body>
-      </html>
-    `;
+    return mustache.render(template, {
+      user,
+      query,
+      statistics,
+      labelsJson: JSON.stringify(labels),
+      datasetsJson: JSON.stringify(datasets),
+    });
   }
 
   private async uploadToDropbox(filePath: string): Promise<string> {

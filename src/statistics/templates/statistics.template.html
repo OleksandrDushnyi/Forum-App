@@ -1,0 +1,85 @@
+<html>
+  <head>
+    <title>User Statistics</title>
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      canvas {
+        display: block;
+        margin: 20px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>User Statistics</h1>
+    <div>
+      <h2>User Info:</h2>
+      <p><strong>Name:</strong> {{user.name}}</p>
+      <p><strong>Email:</strong> {{user.email}}</p>
+      <p><strong>Followers:</strong> {{user.followers.length}}</p>
+      <p><strong>Following:</strong> {{user.followings.length}}</p>
+      <h2>Statistics Data:</h2>
+      <p><strong>Period:</strong> {{query.startDate}} to {{query.endDate}}</p>
+      <p><strong>Interval:</strong> {{query.interval}}</p>
+    </div>
+    <canvas id="statisticsChart" width="800" height="400"></canvas>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#statistics}}
+        <tr>
+          <td>{{date}}</td>
+          <td>
+            {{#actions}}
+            <div>{{action}} ({{entityType}}): {{count}}</div>
+            {{/actions}}
+          </td>
+        </tr>
+        {{/statistics}}
+      </tbody>
+    </table>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const labels = JSON.parse('{{{labelsJson}}}');
+      const datasets = JSON.parse('{{{datasetsJson}}}');
+
+      const ctx = document.getElementById('statisticsChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets,
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true },
+            title: {
+              display: true,
+              text: 'User Statistics by Entity Type',
+            },
+          },
+          scales: {
+            x: { title: { display: true, text: 'Date' } },
+            y: { title: { display: true, text: 'Actions Count' }, min: 0 },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
