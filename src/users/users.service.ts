@@ -206,4 +206,22 @@ export class UsersService {
 
     return user;
   }
+
+  async findUserInformation(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: id || undefined },
+      select: {
+        name: true,
+        email: true,
+        followers: { select: { id: true } },
+        followings: { select: { id: true } },
+      },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    return user;
+  }
 }
