@@ -143,7 +143,12 @@ export class StatisticsService {
     user: any,
     query: any,
   ): Promise<string> {
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      headless: true,
+
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
     const page = await browser.newPage();
 
     const htmlContent = this.generateHtml(statistics, user, query);
