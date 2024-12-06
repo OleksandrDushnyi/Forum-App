@@ -58,11 +58,6 @@ export class PostService {
       throw new ForbiddenException('Post not found');
     }
 
-    const isAdmin = await this.isAdmin(updatePostDto.userId);
-    if (!isAdmin && post.userId !== updatePostDto.userId) {
-      throw new ForbiddenException('You can only update your own posts');
-    }
-
     let imageUrl = post.image;
     if (updatePostDto.image) {
       imageUrl = updatePostDto.image;

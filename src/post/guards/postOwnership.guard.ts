@@ -9,9 +9,8 @@ import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PostOwnershipGuard implements CanActivate {
-  private prisma = new PrismaClient();
-
   constructor(private readonly jwtService: JwtService) {}
+  private prisma = new PrismaClient();
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -22,14 +21,22 @@ export class PostOwnershipGuard implements CanActivate {
     }
 
     try {
-      const decoded = this.jwtService.verify(token);
+      const decoded = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET,
+      });
+
       const userId = decoded.userId;
       const roleId = decoded.roleId;
 
       const { id } = request.params;
+      const postId = parseInt(id);
+
+      if (isNaN(postId)) {
+        throw new ForbiddenException('Invalid post ID');
+      }
 
       const post = await this.prisma.post.findUnique({
-        where: { id: parseInt(id) },
+        where: { id: postId },
       });
 
       if (!post) {
@@ -40,8 +47,11 @@ export class PostOwnershipGuard implements CanActivate {
         return true;
       }
 
-      throw new ForbiddenException('You can only update your own posts');
+      throw new ForbiddenException(
+        'You can only update or delete your own posts',
+      );
     } catch (error) {
+      console.error('Error:', error.message);
       throw new ForbiddenException('Access denied');
     }
   }

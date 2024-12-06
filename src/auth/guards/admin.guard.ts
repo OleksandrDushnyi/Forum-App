@@ -19,7 +19,9 @@ export class AdminGuard implements CanActivate {
     }
 
     try {
-      const decoded = this.jwtService.verify(token);
+      const decoded = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET,
+      });
 
       if (decoded.roleId !== 2) {
         throw new ForbiddenException('Access denied');

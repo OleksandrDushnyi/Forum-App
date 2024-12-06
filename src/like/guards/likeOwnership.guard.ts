@@ -22,7 +22,9 @@ export class LikeOwnershipGuard implements CanActivate {
     }
 
     try {
-      const decoded = this.jwtService.verify(token);
+      const decoded = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET,
+      });
       const userId = decoded.userId;
       const roleId = decoded.roleId;
 
