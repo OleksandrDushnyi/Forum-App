@@ -12,22 +12,26 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { SignInDto } from './dto/signin.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('signUp')
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.signUp(createUserDto);
   }
 
+  @Public()
   @Post('signIn')
   async login(@Body() signInDto: SignInDto) {
     return this.authService.signIn(signInDto);
   }
 
-  @Get('verify-email/:token')
+  @Public()
+  @Get('email-confirmation-token/:token')
   async verifyEmail(@Param('token') token: string) {
     if (!token) {
       throw new BadRequestException('Token is missing');
